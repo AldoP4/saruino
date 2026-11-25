@@ -41,7 +41,7 @@ La presentación de apoyo (6 diapositivas) ya trae en cada una quién presenta y
 ### 2.0 Primero: bajar el proyecto a tu compu
 
 1. Instala **Git** (https://git-scm.com) y **VS Code** si no los tienes.
-2. Acepta la invitación al repositorio que te llega por correo de GitHub (el repositorio es privado).
+2. El repositorio es público (https://github.com/AldoP4/saruino), así que puedes bajarlo sin cuenta. Solo si vas a subir cambios necesitas cuenta de GitHub y que Aldo te invite como colaborador.
 3. En una terminal (PowerShell), en la carpeta donde lo quieras guardar:
    ```powershell
    git clone https://github.com/AldoP4/saruino.git
