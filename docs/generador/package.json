@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "description": "Generador del documento Word de Saruino (usa require, por eso es commonjs)",
+  "type": "commonjs"
+}

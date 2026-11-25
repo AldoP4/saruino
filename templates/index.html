@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Plataforma para reducir el desperdicio de alimentos en Puebla">
+    <meta name="theme-color" content="#0f0c0a">
+    <title>Saruino | Comida buena, segunda oportunidad</title>
+    <!-- Flask arma las rutas de static/ con url_for -->
+    <link rel="icon" href="{{ url_for('static', filename='img/saruino-logo.webp') }}" type="image/webp">
+    <!-- Cinzel (títulos: letra romana como la del logo) y DM Sans (texto). Sin internet se usan letras del sistema -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+    <!-- Le dice al navegador dónde está Three.js cuando el código pide import "three" -->
+    <script type="importmap">
+        { "imports": { "three": "{{ url_for('static', filename='vendor/three.module.min.js') }}" } }
+    </script>
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+</head>
+<body>
+    <!-- Aquí se dibujan las brasas doradas en 3D (src/decoracion/fondo3d.ts) -->
+    <div class="fondo-3d" id="fondo-3d" aria-hidden="true"></div>
+    <a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
+
+    <header class="site-header">
+        <nav class="nav-container" aria-label="Navegación principal">
+            <a class="brand" href="#inicio" aria-label="Ir al inicio">
+                <img class="brand-logo" src="{{ url_for('static', filename='img/saruino-logo.webp') }}" alt="" width="58" height="38">
+                <span>Saruino</span>
+            </a>
+            <div class="nav-derecha">
+                <!-- data-ver: qué roles ven cada opción (Demo = sin SQL Server) -->
+                <div class="nav-links">
+                    <a href="#inicio">Inicio</a>
+                    <a href="#disponibles">Disponibles</a>
+                    <a href="#publicar" data-ver="Negocio,Demo">Publicar</a>
+                    <a href="#reservas" id="enlace-reservas" data-ver="Cliente,Negocio,Administrador,Demo">Reservas</a>
+                    <a href="#admin" data-ver="Administrador">Administración</a>
+                    <a href="#cuenta" id="enlace-cuenta">Entrar</a>
+                </div>
+                <span class="rol-actual" id="rol-actual">Visitante</span>
+                <div class="zona-notificaciones" id="zona-notificaciones">
+                    <button class="campana" id="boton-notificaciones" type="button" aria-expanded="false" aria-controls="panel-notificaciones" aria-label="Notificaciones">
+                        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
+                        <span class="contador" id="contador-notificaciones" hidden>0</span>
+                    </button>
+                    <div class="panel-notificaciones" id="panel-notificaciones" hidden>
+                        <div class="panel-cabecera">
+                            <strong>Notificaciones</strong>
+                            <button class="enlace-boton" id="limpiar-notificaciones" type="button">Limpiar</button>
+                        </div>
+                        <ul id="lista-notificaciones"></ul>
+                        <!-- Observer: este interruptor suscribe o desuscribe al servicio externo de mensajes -->
+                        <label class="interruptor">
+                            <input type="checkbox" id="avisos-externos" checked>
+                            <span>Enviar también por mensaje (servicio externo)</span>
+                        </label>
+                        <p class="panel-pie">Mensajes enviados por el servicio externo: <strong id="mensajes-externos">0</strong></p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="contenido" id="contenido-principal">
+        <p class="estado-bd" id="estado-bd" role="status">Revisando conexión a la base de datos…</p>
+
+        <section class="hero" id="inicio">
+            <div class="hero-copy">
+                <span class="eyebrow">Menos desperdicio, más mesa</span>
+                <h1>Comida buena, <span class="acento">segunda oportunidad.</span></h1>
+                <p>Restaurantes, cafeterías, panaderías y supermercados publican lo que no vendieron en el día. Los clientes lo reservan con descuento o como donación, y lo recogen a tiempo.</p>
+                <div class="hero-actions">
+                    <a class="button button-primary" href="#disponibles">Ver alimentos disponibles</a>
+                    <a class="button button-secondary" href="#cuenta">Crear cuenta</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <img class="hero-logo" src="{{ url_for('static', filename='img/saruino-logo.webp') }}" alt="Logo de Saruino" width="520" height="341">
+                <!-- Tarjeta encimada sobre el logo: kilos de la tabla RegistroDesperdicio -->
+                <aside class="impacto" aria-label="Impacto de la plataforma">
+                    <span class="impacto-etiqueta">Desperdicio evitado</span>
+                    <p class="impacto-numero"><span id="kilos-evitados">0</span><small>kg</small></p>
+                    <dl class="impacto-datos">
+                        <div><dt>Activas</dt><dd id="publicaciones-activas">0</dd></div>
+                        <div><dt>Donaciones</dt><dd id="donaciones">0</dd></div>
+                        <div><dt>Negocios</dt><dd id="negocios">0</dd></div>
+                    </dl>
+                </aside>
+            </div>
+        </section>
+
+        <section class="seccion" id="disponibles" data-revelar>
+            <div class="seccion-cabecera">
+                <div>
+                    <span class="eyebrow">Hoy en Puebla</span>
+                    <h2>Alimentos disponibles</h2>
+                </div>
+                <div class="chips" role="group" aria-label="Filtrar por modalidad">
+                    <button class="chip" type="button" data-filtro="Todas">Todas</button>
+                    <button class="chip" type="button" data-filtro="Venta">Venta</button>
+                    <button class="chip" type="button" data-filtro="Descuento">Descuento</button>
+                    <button class="chip" type="button" data-filtro="Donación">Donación</button>
+                </div>
+            </div>
+            <div class="rejilla" id="lista-publicaciones"></div>
+        </section>
+
+        <section class="seccion seccion-publicar" id="publicar" data-ver="Negocio,Demo" data-revelar>
+            <div class="publicar-texto">
+                <span class="eyebrow">Para negocios</span>
+                <h2>Publica lo que no vendiste</h2>
+                <p>Elige la modalidad. Si es descuento, la plataforma lo calcula según la caducidad o la cantidad disponible.</p>
+                <p class="publica-como" id="publica-como"></p>
+                <p class="vista-previa" id="vista-previa" aria-live="polite"></p>
+            </div>
+            <p class="aviso-permiso" id="aviso-publicar" hidden>Solo los negocios pueden publicar. <a href="#cuenta">Entra o crea una cuenta de negocio</a>.</p>
+            <form class="formulario" id="form-publicar" novalidate>
+                <label class="ancho">Producto<input name="producto" required maxlength="120" placeholder="Pan dulce surtido"></label>
+                <label>Cantidad<input name="cantidad" type="number" min="1" value="10" required></label>
+                <label>Kilos<input name="kilos" type="number" min="0.1" step="0.1" value="2" required></label>
+                <label>Caduca en (horas)<input name="horasParaCaducar" type="number" min="1" value="5" required></label>
+                <label>Modalidad
+                    <select name="modalidad">
+                        <option value="Descuento">Descuento</option><option value="Venta">Venta</option><option value="Donación">Donación</option>
+                    </select>
+                </label>
+                <label id="campo-precio">Precio original (MXN)<input name="precioOriginal" type="number" min="0" step="0.5" value="200"></label>
+                <label id="campo-estrategia">Calcular descuento
+                    <select name="estrategia">
+                        <option value="caducidad">Por caducidad</option><option value="disponibilidad">Por disponibilidad</option>
+                    </select>
+                </label>
+                <label class="ancho">Horario de recolección<input name="horarioRecoleccion" required maxlength="50" placeholder="19:00 – 20:30"></label>
+                <button class="button button-primary ancho" type="submit">Publicar alimento</button>
+            </form>
+        </section>
+
+        <section class="seccion" id="reservas" data-ver="Cliente,Negocio,Administrador,Demo" data-revelar>
+            <div class="seccion-cabecera">
+                <div>
+                    <span class="eyebrow">Seguimiento</span>
+                    <h2 id="titulo-reservas">Reservas y entregas</h2>
+                </div>
+            </div>
+            <div class="columnas">
+                <div class="columna">
+                    <h3>Reservadas</h3>
+                    <ul class="lista-reservas" id="lista-reservadas"></ul>
+                </div>
+                <div class="columna">
+                    <h3>Entregadas</h3>
+                    <ul class="lista-reservas" id="lista-entregadas"></ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="seccion" id="admin" data-ver="Administrador" data-revelar hidden>
+            <div class="seccion-cabecera">
+                <div>
+                    <span class="eyebrow">Solo administrador</span>
+                    <h2>Panel de administración</h2>
+                </div>
+                <button class="button button-secondary" id="actualizar-admin" type="button">Actualizar</button>
+            </div>
+            <div class="tarjetas-admin" id="tarjetas-admin"></div>
+            <div class="columnas">
+                <div class="columna">
+                    <h3>Kilos evitados por negocio</h3>
+                    <table class="tabla-admin">
+                        <thead><tr><th>Negocio</th><th>Publicaciones</th><th>Kilos</th></tr></thead>
+                        <tbody id="tabla-negocios"></tbody>
+                    </table>
+                </div>
+                <div class="columna">
+                    <h3>Usuarios registrados</h3>
+                    <table class="tabla-admin">
+                        <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th></tr></thead>
+                        <tbody id="tabla-usuarios"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="columna admin-publicaciones">
+                <h3>Todas las publicaciones</h3>
+                <table class="tabla-admin">
+                    <thead><tr><th>Producto</th><th>Negocio</th><th>Modalidad</th><th>Estado</th><th></th></tr></thead>
+                    <tbody id="tabla-publicaciones-admin"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="seccion" id="cuenta" data-revelar>
+            <div class="seccion-cabecera">
+                <div>
+                    <span class="eyebrow">Mi cuenta</span>
+                    <h2 id="titulo-cuenta">Entra o crea tu cuenta</h2>
+                </div>
+                <button class="button button-secondary" id="boton-salir" type="button" hidden>Cerrar sesión</button>
+            </div>
+
+            <p class="aviso-permiso" id="aviso-sin-bd" hidden>Las cuentas necesitan conexión con SQL Server.</p>
+
+            <div class="columnas" id="formularios-cuenta">
+                <form class="columna formulario-cuenta" id="form-login" novalidate>
+                    <h3>Entrar</h3>
+                    <label>Correo<input name="correo" type="email" required autocomplete="username"></label>
+                    <label>Contraseña<input name="contrasena" type="password" required autocomplete="current-password"></label>
+                    <button class="button button-primary" type="submit">Entrar</button>
+                </form>
+
+                <form class="columna formulario-cuenta" id="form-registro" novalidate>
+                    <h3>Crear cuenta</h3>
+                    <label>Soy
+                        <select name="tipo">
+                            <option value="Cliente">Cliente (quiero reservar comida)</option>
+                            <option value="Negocio">Restaurante o negocio (publico alimentos)</option>
+                        </select>
+                    </label>
+                    <label>Nombre<input name="nombre" required maxlength="100" autocomplete="name"></label>
+                    <label>Correo<input name="correo" type="email" required maxlength="120" autocomplete="email"></label>
+                    <label>Contraseña (mínimo 8 caracteres)<input name="contrasena" type="password" required minlength="8" autocomplete="new-password"></label>
+                    <label id="campo-tipo-negocio" hidden>Tipo de negocio
+                        <select name="tipoNegocio">
+                            <option>Restaurante</option><option>Cafetería</option><option>Panadería</option><option>Supermercado</option>
+                        </select>
+                    </label>
+                    <label id="campo-direccion" hidden>Dirección<input name="direccion" maxlength="200" placeholder="Av. Reforma 512, Centro"></label>
+                    <button class="button button-primary" type="submit">Crear cuenta</button>
+                </form>
+            </div>
+
+            <div class="columna" id="panel-usuario" hidden>
+                <p class="resumen-panel" id="resumen-panel"></p>
+                <ul class="lista-reservas" id="lista-panel"></ul>
+            </div>
+        </section>
+    </main>
+
+    <div class="avisos" id="avisos" aria-live="polite"></div>
+
+    <footer class="site-footer">
+        <div class="footer-contenido">
+            <div class="footer-marca">
+                <img class="footer-logo" src="{{ url_for('static', filename='img/saruino-logo.webp') }}" alt="" width="72" height="47">
+                <p><strong>Saruino</strong><br>Comida buena, segunda oportunidad.</p>
+            </div>
+            <p class="footer-texto">&copy; 2026 Saruino · Proyecto final de Patrones Orientados a Objetos · Ingeniería en Software</p>
+            <img class="logo-escuela" src="{{ url_for('static', filename='img/umad-blanco.webp') }}" alt="Universidad Madero" width="150" height="74">
+        </div>
+    </footer>
+</body>
+</html>

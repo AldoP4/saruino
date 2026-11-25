@@ -1,0 +1,5 @@
+node_modules/
+__pycache__/
+.venv/
+# Archivos temporales de Word y Office
+~$*
